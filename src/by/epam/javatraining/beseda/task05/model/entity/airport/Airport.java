@@ -98,7 +98,7 @@ public class Airport {
                     passengersLeft++;
                 }
             }
-            log.trace(passengersLeft + " left the airport");
+            log.trace(passengersLeft + " passengers left the airport");
             log.trace(planePassengers - passengersLeft
                     + " passengers stayed in waiting room");
         }

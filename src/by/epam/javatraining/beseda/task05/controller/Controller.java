@@ -20,7 +20,7 @@ public class Controller {
 
         Airport a = AirportCreator.createAirport(4);
 
-        Airplane[] aArr = AirplaneFactory.createFilledAirplanes(a, 9);
+        Airplane[] aArr = AirplaneFactory.createFilledAirplanes(a, 11);
 
         PassengerFactory.getFactory(a);
     }

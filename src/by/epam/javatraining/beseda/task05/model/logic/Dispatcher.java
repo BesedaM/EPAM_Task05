@@ -13,9 +13,9 @@ public class Dispatcher {
 
     public static void setTerminalDestination(Terminal t) {
         try {
-            t.setReadyForDeparture();
             t.setDepartureDestination(PropertyValue.DESTINATION[new Random()
                     .nextInt(PropertyValue.DESTINATION.length)]);
+            t.setReadyForDeparture();
         } catch (IllegalDestinationException ex) {
             Logger.getLogger(Dispatcher.class.getSimpleName()).error(ex);
         }

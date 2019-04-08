@@ -30,7 +30,7 @@ public class Airplane implements Runnable {
     private int planeNumber;
     private AtomicReference destination;
     private int seatsNumber;
-    private Airport airport;
+    private AtomicReference airport;
     private ConcurrentLinkedQueue<Passenger> passengers;
 
     private CountDownLatch latch;
@@ -38,21 +38,21 @@ public class Airplane implements Runnable {
     private Thread thread;
 
     {
-
+        airport = new AtomicReference(null);
         destination = new AtomicReference(null);
         flag = true;
         passengers = new ConcurrentLinkedQueue<>();
-        this.planeNumber = ++number;
+        planeNumber = ++number;
         thread = new Thread(this);
         thread.start();
     }
 
     public Airplane(Airport p) {
-        this.airport = p;
+        airport.lazySet(p);
     }
 
     public Airplane(Airport p, String destination, int seatsNumber) {
-        this.airport = p;
+        airport.lazySet(p);
         this.destination.lazySet(destination);
         this.seatsNumber = seatsNumber;
         latch = new CountDownLatch(this.seatsNumber - PropertyValue.SPARE_SEATS);
@@ -77,7 +77,7 @@ public class Airplane implements Runnable {
 
     public void setAirport(Airport p) throws IllegalAirportValueException {
         if (p != null) {
-            this.airport = p;
+            airport.lazySet(p);
         } else {
             throw new IllegalAirportValueException("An attempt to set null value "
                     + "to airport field for airplane");
@@ -85,7 +85,7 @@ public class Airplane implements Runnable {
     }
 
     public Airport getAirport() {
-        return this.airport;
+        return (Airport)this.airport.get();
     }
 
     public int seatNumber() {
@@ -151,7 +151,8 @@ public class Airplane implements Runnable {
                             PropertyValue.WAIT_BEFORE_LANDING));
 
                     while (true) {
-                        t = airport.getFreeTerminal();
+                        log.trace("WHILE running...");
+                        t = ((Airport)airport.get()).getFreeTerminal();
                         if (t != null) {
                             t.lockTerminal();
                             break;
@@ -161,7 +162,7 @@ public class Airplane implements Runnable {
                     }
                     log.trace("Plane №" + this.planeNumber + " landed");
 
-                    airport.takePassengers(this);
+                    ((Airport)airport.get()).takePassengers(this);
                     TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
                     t.unlockTerminal();
                 }
@@ -169,7 +170,7 @@ public class Airplane implements Runnable {
                 TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_DEPARTURE);
 
                 while (true) {
-                    t = airport.getFreeTerminal();
+                    t = ((Airport)airport.get()).getFreeTerminal();
                     if (t != null) {
                         Dispatcher.setTerminalDestination(t);
                         log.trace("!Plane to " + t.getDestination()
@@ -184,10 +185,10 @@ public class Airplane implements Runnable {
                 this.destination.lazySet(t.getDestination());
                 latch.await();
 
-                log.trace("The plane to " + this.destination + " has departed...");
+                log.trace("The plane to " + this.destination + " has departured...");
 
                 TimeUnit.MILLISECONDS.sleep(PropertyValue.TERMINAL_WAIT_AFTER_DEPARTURE);
-                t.unlockTerminal();
+
                 flag = false;
             } catch (InterruptedException ex) {
                 Logger.getLogger(Airplane.class.getSimpleName()).error(ex);

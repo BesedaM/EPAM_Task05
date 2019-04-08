@@ -116,15 +116,15 @@ public class Passenger implements Runnable, Comparable<Passenger> {
                         }
                     }
                     this.flag = false;
-                }
-
-                for (int i = 0; i < 2; i++) {
-                    tryToFindTerminal();
-                }
-                ticket = new Exchanger<Ticket>().exchange(ticket);
-                log.trace("Passengers exchanged tickets");
-                for (int i = 0; i < 2; i++) {
-                    tryToFindTerminal();
+                } else {
+                    for (int i = 0; i < 2; i++) {
+                        tryToFindTerminal();
+                    }
+                    ticket = new Exchanger<Ticket>().exchange(ticket);
+                    log.trace("Passengers exchanged tickets");
+                    for (int i = 0; i < 2; i++) {
+                        tryToFindTerminal();
+                    }
                 }
             }
         } catch (InterruptedException | AirportLogicException ex) {
@@ -135,8 +135,10 @@ public class Passenger implements Runnable, Comparable<Passenger> {
     private void tryToFindTerminal() throws AirportLogicException {
         Terminal t = null;
         for (int i = 0; i < airport.getTerminalList().size(); i++) {
-            if (airport.getTerminalList().get(i).getDestination().equals(ticket.getDestination())) {
-                t = airport.getTerminalList().get(i);
+            Terminal temp = airport.getTerminalList().get(i);
+            if (temp.isReadyForDeparture()
+                    && temp.getDestination().equals(ticket.getDestination())) {
+                t = temp;
                 break;
             }
         }
