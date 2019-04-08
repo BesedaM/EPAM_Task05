@@ -2,6 +2,8 @@ package by.epam.javatraining.beseda.task05.model.entity.airport;
 
 import by.epam.javatraining.beseda.task05.model.entity.Airplane;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalDestinationException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -15,11 +17,13 @@ public class Terminal {
 
     private int number;
     private Lock lock;
-    private boolean forDeparture;
-    private String destination;
+    private AtomicBoolean forDeparture;
+    private AtomicReference destination;
     private Airplane airplane;
 
     {
+        forDeparture = new AtomicBoolean(false);
+        destination = new AtomicReference(null);
         number = ++terminalNumber;
         lock = new ReentrantLock(true);
     }
@@ -45,12 +49,12 @@ public class Terminal {
 
     public void unlockTerminal() {
         this.airplane = null;
-        this.forDeparture = false;
+        this.forDeparture.lazySet(false);
         this.lock.unlock();
     }
 
     public void setReadyForDeparture() {
-        this.forDeparture = true;
+        this.forDeparture.lazySet(true);
     }
 
     public void registerAirplane(Airplane a) {
@@ -58,12 +62,12 @@ public class Terminal {
     }
 
     public boolean isReadyForDeparture() {
-        return this.forDeparture;
+        return this.forDeparture.get();
     }
 
     public void setDepartureDestination(String destination) throws IllegalDestinationException {
         if (destination != null) {
-            this.destination = destination;
+            this.destination.lazySet(destination);
         } else {
             throw new IllegalDestinationException("An attempt to assign "
                     + "null value to terminal destination field");
@@ -71,7 +75,7 @@ public class Terminal {
     }
 
     public String getDestination() {
-        return this.destination;
+        return this.destination.get().toString();
     }
 
     public Airplane getAiplane() {

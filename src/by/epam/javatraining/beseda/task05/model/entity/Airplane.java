@@ -6,6 +6,7 @@ import by.epam.javatraining.beseda.task05.model.exception.AirportLogicException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalAirportValueException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalDestinationException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalPassengerValueException;
+import by.epam.javatraining.beseda.task05.model.exception.IllegalSeatNumberException;
 import by.epam.javatraining.beseda.task05.model.exception.NotEnoughSpaceException;
 import by.epam.javatraining.beseda.task05.model.logic.Dispatcher;
 import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
@@ -14,6 +15,7 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 
 /**
@@ -26,33 +28,39 @@ public class Airplane implements Runnable {
     public static Logger log = Logger.getLogger(Airplane.class.getSimpleName());
 
     private int planeNumber;
-    private String destination;
-    private int seatNumber;
+    private AtomicReference destination;
+    private int seatsNumber;
     private Airport airport;
     private ConcurrentLinkedQueue<Passenger> passengers;
 
-    private CountDownLatch latch = new CountDownLatch(this.seatNumber);
+    private CountDownLatch latch;
+    private boolean flag;
     private Thread thread;
 
     {
+
+        destination = new AtomicReference(null);
+        flag = true;
         passengers = new ConcurrentLinkedQueue<>();
         this.planeNumber = ++number;
         thread = new Thread(this);
+        thread.start();
     }
 
     public Airplane(Airport p) {
         this.airport = p;
     }
 
-    public Airplane(Airport p, String destination, int seatNumber) {
+    public Airplane(Airport p, String destination, int seatsNumber) {
         this.airport = p;
-        this.destination = destination;
-        this.seatNumber = seatNumber;
+        this.destination.lazySet(destination);
+        this.seatsNumber = seatsNumber;
+        latch = new CountDownLatch(this.seatsNumber - PropertyValue.SPARE_SEATS);
     }
 
     public void setDestination(String destination) throws IllegalDestinationException {
         if (destination != null) {
-            this.destination = destination;
+            this.destination.lazySet(destination);
         } else {
             throw new IllegalDestinationException("An attempt to assign "
                     + "illegal destination value to airplane number " + this.planeNumber);
@@ -64,7 +72,7 @@ public class Airplane implements Runnable {
     }
 
     public String getDestination() {
-        return destination;
+        return destination.get().toString();
     }
 
     public void setAirport(Airport p) throws IllegalAirportValueException {
@@ -81,11 +89,20 @@ public class Airplane implements Runnable {
     }
 
     public int seatNumber() {
-        return seatNumber;
+        return seatsNumber;
     }
 
-    public void setPlane() {
+    public void startAction() {
         thread.start();
+    }
+
+    public void setSeatsNumber(int number) throws IllegalSeatNumberException {
+        if (number > 0) {
+            this.seatsNumber = number;
+            latch = new CountDownLatch(this.seatsNumber - PropertyValue.SPARE_SEATS);
+        } else {
+            throw new IllegalSeatNumberException();
+        }
     }
 
     public boolean deletePlane() {
@@ -98,7 +115,7 @@ public class Airplane implements Runnable {
 
     public void loadPassenger(Passenger p) throws AirportLogicException {
         if (p != null) {
-            if (passengers.size() < this.seatNumber) {
+            if (passengers.size() < this.seatsNumber) {
                 passengers.add(p);
                 latch.countDown();
             } else {
@@ -126,54 +143,60 @@ public class Airplane implements Runnable {
 
     @Override
     public void run() {
+        while (flag) {
+            try {
+                Terminal t;
+                if (!passengers.isEmpty()) {
+                    TimeUnit.MILLISECONDS.sleep(new Random().nextInt(
+                            PropertyValue.WAIT_BEFORE_LANDING));
 
-        try {
-            Terminal t;
-            if (!passengers.isEmpty()) {
-                TimeUnit.MILLISECONDS.sleep(new Random().nextInt(
-                        PropertyValue.WAIT_BEFORE_LANDING));
+                    while (true) {
+                        t = airport.getFreeTerminal();
+                        if (t != null) {
+                            t.lockTerminal();
+                            break;
+                        } else {
+                            TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
+                        }
+                    }
+                    log.trace("Plane №" + this.planeNumber + " landed");
+
+                    airport.takePassengers(this);
+                    TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
+                    t.unlockTerminal();
+                }
+
+                TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_DEPARTURE);
 
                 while (true) {
                     t = airport.getFreeTerminal();
                     if (t != null) {
+                        Dispatcher.setTerminalDestination(t);
+                        log.trace("!Plane to " + t.getDestination()
+                                + " departures from terminal " + t.getNumber());
                         t.lockTerminal();
+                        t.registerAirplane(this);
                         break;
                     } else {
                         TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
                     }
                 }
-                log.trace("Plane №" + this.planeNumber + " landed");
+                this.destination.lazySet(t.getDestination());
+                latch.await();
 
-                airport.takePassengers(this);
-                TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
+                log.trace("The plane to " + this.destination + " has departed...");
+
+                TimeUnit.MILLISECONDS.sleep(PropertyValue.TERMINAL_WAIT_AFTER_DEPARTURE);
                 t.unlockTerminal();
+                flag = false;
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Airplane.class.getSimpleName()).error(ex);
             }
-
-            TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_DEPARTURE);
-
-            while (true) {
-                t = airport.getFreeTerminal();
-                if (t != null) {
-                    Dispatcher.setTerminalDestination(t);
-                    log.trace("!Plane to " + t.getDestination()
-                            + " departures from terminal " + t.getNumber());
-                    t.lockTerminal();
-                    t.registerAirplane(this);
-                    break;
-                } else {
-                    TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
-                }
-            }
-            this.destination = t.getDestination();
-            latch.await();
-            
-            log.trace("The plane to " + this.destination + " has departed...");
-            
-            TimeUnit.MILLISECONDS.sleep(PropertyValue.TERMINAL_WAIT_AFTER_DEPARTURE);
-            t.unlockTerminal();
-        } catch (InterruptedException ex) {
-            Logger.getLogger(Airplane.class.getSimpleName()).error(ex);
         }
+    }
+
+    public void stopRunning() {
+        this.flag = false;
     }
 
     @Override
@@ -181,7 +204,7 @@ public class Airplane implements Runnable {
         int hash = 3;
         hash = 27 * hash + this.planeNumber;
         hash = 27 * hash + Objects.hashCode(this.destination);
-        hash = 27 * hash + this.seatNumber;
+        hash = 27 * hash + this.seatsNumber;
         return hash;
     }
 
@@ -200,7 +223,7 @@ public class Airplane implements Runnable {
         if (this.planeNumber != other.planeNumber) {
             return false;
         }
-        if (this.seatNumber != other.seatNumber) {
+        if (this.seatsNumber != other.seatsNumber) {
             return false;
         }
         if (!Objects.equals(this.destination, other.destination)) {

@@ -20,7 +20,7 @@ public class WaitingRoom {
     private AtomicInteger passengersNumber;
 
     {
-        passengersNumber.set(0);
+        passengersNumber = new AtomicInteger(0);
         passengers = new ConcurrentLinkedQueue<>();
     }
 

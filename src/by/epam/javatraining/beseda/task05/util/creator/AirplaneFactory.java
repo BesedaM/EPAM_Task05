@@ -6,6 +6,7 @@ import by.epam.javatraining.beseda.task05.model.entity.airport.Airport;
 import by.epam.javatraining.beseda.task05.model.exception.AirportLogicException;
 import java.util.Random;
 import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
+import org.apache.log4j.Logger;
 
 /**
  *
@@ -13,12 +14,12 @@ import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
  */
 public class AirplaneFactory {
 
-    public static int[] AIRPLANE_SEAT_NUMBER = {30, 40, 50};
+    public static int[] AIRPLANE_SEAT_NUMBER = {20, 30, 40};
 
     public static Airplane createAirplane(Airport a) {
-        return new Airplane(a, PropertyValue.DESTINATION[
-                new Random().nextInt(PropertyValue.DESTINATION.length)],
-                AIRPLANE_SEAT_NUMBER[new Random().nextInt(AIRPLANE_SEAT_NUMBER.length)]);
+        String destination = PropertyValue.DESTINATION[new Random().nextInt(PropertyValue.DESTINATION.length)];
+        int seatNumber = AIRPLANE_SEAT_NUMBER[new Random().nextInt(AIRPLANE_SEAT_NUMBER.length)];
+        return new Airplane(a, destination, seatNumber);
     }
 
     public static Airplane createFilledAirplane(Airport a) throws AirportLogicException {
@@ -34,5 +35,25 @@ public class AirplaneFactory {
             plane.loadPassenger(p);
         }
         return plane;
+    }
+
+    public static Airplane[] createFilledAirplanes(Airport a, int airplaneNumber) {
+        Airplane[] arr = new Airplane[airplaneNumber];
+        for (int i = 0; i < airplaneNumber; i++) {
+            try {
+                arr[i] = createFilledAirplane(a);
+            } catch (AirportLogicException ex) {
+                Logger.getLogger(AirplaneFactory.class.getSimpleName()).fatal(ex);
+            }
+        }
+        return arr;
+    }
+
+    public static Airplane[] createSeveralAirplane(Airport a, int airplaneNumber) {
+        Airplane[] arr = new Airplane[airplaneNumber];
+        for (int i = 0; i < airplaneNumber; i++) {
+            arr[i] = createAirplane(a);
+        }
+        return arr;
     }
 }

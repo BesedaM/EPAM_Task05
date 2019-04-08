@@ -2,7 +2,6 @@ package by.epam.javatraining.beseda.task05.model.entity.airport;
 
 import by.epam.javatraining.beseda.task05.model.entity.Airplane;
 import by.epam.javatraining.beseda.task05.model.entity.Passenger;
-import by.epam.javatraining.beseda.task05.model.entity.Ticket;
 import by.epam.javatraining.beseda.task05.model.exception.AirportLogicException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalWaitingRoomException;
 import java.util.List;
@@ -74,15 +73,8 @@ public class Airport {
         return t;
     }
 
-    public Terminal getTerminalByTicket(Ticket p) {
-        Terminal t = null;
-        for (int i = 0; i < terminals.size(); i++) {
-            if (terminals.get(i).getDestination().equals(p.getDestination())) {
-                t = terminals.get(i);
-                break;
-            }
-        }
-        return t;
+    public List<Terminal> getTerminalList() {
+        return this.terminals;
     }
 
     public void addTerminal() {

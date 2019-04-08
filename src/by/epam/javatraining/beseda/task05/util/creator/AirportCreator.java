@@ -11,7 +11,7 @@ public class AirportCreator {
 
     public static int WAITING_ROOM_CAPACITY = 500;
 
-    public static Airport createAirport(int terminalsNumber) {
-        return Airport.getAirport(new WaitingRoom(WAITING_ROOM_CAPACITY),terminalsNumber);
+    public static Airport createAirport(int terminalNumber) {
+        return Airport.getAirport(new WaitingRoom(WAITING_ROOM_CAPACITY),terminalNumber);
     }
 }

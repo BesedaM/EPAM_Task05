@@ -7,6 +7,7 @@ import by.epam.javatraining.beseda.task05.model.exception.IllegalPassengerNameEx
 import by.epam.javatraining.beseda.task05.model.exception.IllegalPassengerSurnameException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalTicketValueException;
 import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
@@ -84,7 +85,7 @@ public class Passenger implements Runnable, Comparable<Passenger> {
         return ticket;
     }
 
-    public boolean findTerminal(Terminal t) {
+    public boolean findTerminalByDestination(Terminal t) {
         if (t != null) {
             return this.ticket.getDestination().equals(t.getDestination());
         } else {
@@ -98,50 +99,62 @@ public class Passenger implements Runnable, Comparable<Passenger> {
         }
     }
 
-    public void stopAction() {
-        this.flag = false;
-    }
-
     @Override
     public void run() {
 
         try {
             while (this.flag) {
-                for (int i = 0; i < 2; i++) {
-                    Terminal t = airport.getTerminalByTicket(ticket);
-                    if (t == null) {
-                        try {
-                            TimeUnit.MILLISECONDS.sleep(PropertyValue.PASSENGER_WAIT_BEFORE_CHECKING);
-                        } catch (InterruptedException ex) {
-                            log.fatal(ex);
+
+                if (ticket == null) {
+                    List<Terminal> list = airport.getTerminalList();
+                    for (int i = 0; i < list.size(); i++) {
+                        if (list.get(i).isReadyForDeparture()
+                                && list.get(i).getAiplane().passengersNumber()
+                                < list.get(i).getAiplane().seatNumber()) {
+                            list.get(i).getAiplane().loadPassenger(this);
+                            break;
                         }
-                    } else {
-                        t.getAiplane().loadPassenger(this);
-                        this.airport.getWaitingRoom().removePassenger(this);
-                        this.flag = false;
                     }
+                    this.flag = false;
                 }
-                
+
+                for (int i = 0; i < 2; i++) {
+                    tryToFindTerminal();
+                }
                 ticket = new Exchanger<Ticket>().exchange(ticket);
-                
                 log.trace("Passengers exchanged tickets");
                 for (int i = 0; i < 2; i++) {
-                    Terminal t = airport.getTerminalByTicket(ticket);
-                    if (t == null) {
-                        try {
-                            TimeUnit.MILLISECONDS.sleep(PropertyValue.PASSENGER_WAIT_BEFORE_CHECKING);
-                        } catch (InterruptedException ex) {
-                            log.fatal(ex);
-                        }
-                    } else {
-                        t.getAiplane().loadPassenger(this);
-                        this.flag = false;
-                    }
+                    tryToFindTerminal();
                 }
             }
         } catch (InterruptedException | AirportLogicException ex) {
             log.fatal(ex);
         }
+    }
+
+    private void tryToFindTerminal() throws AirportLogicException {
+        Terminal t = null;
+        for (int i = 0; i < airport.getTerminalList().size(); i++) {
+            if (airport.getTerminalList().get(i).getDestination().equals(ticket.getDestination())) {
+                t = airport.getTerminalList().get(i);
+                break;
+            }
+        }
+        if (t == null) {
+            try {
+                TimeUnit.MILLISECONDS.sleep(PropertyValue.PASSENGER_WAIT_BEFORE_CHECKING);
+            } catch (InterruptedException ex) {
+                log.fatal(ex);
+            }
+        } else {
+            t.getAiplane().loadPassenger(this);
+            this.airport.getWaitingRoom().removePassenger(this);
+            this.flag = false;
+        }
+    }
+
+    public void stopRunning() {
+        this.flag = false;
     }
 
     @Override
