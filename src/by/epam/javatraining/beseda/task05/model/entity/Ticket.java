@@ -1,7 +1,6 @@
 package by.epam.javatraining.beseda.task05.model.entity;
 
 import by.epam.javatraining.beseda.task05.model.exception.IllegalDestinationException;
-import by.epam.javatraining.beseda.task05.model.exception.IllegalNumberException;
 import java.util.Objects;
 
 /**

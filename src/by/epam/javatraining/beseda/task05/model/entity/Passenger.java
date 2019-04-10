@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 
 /**
@@ -21,7 +23,7 @@ public class Passenger implements Runnable, Comparable<Passenger> {
 
     private String name;
     private String surname;
-    private Ticket ticket;
+    private AtomicReference<Ticket> ticket;
     private Airport airport;
 
     private boolean flag;
@@ -30,8 +32,10 @@ public class Passenger implements Runnable, Comparable<Passenger> {
     Logger log = Logger.getLogger(Passenger.class.getSimpleName());
 
     {
+        ticket = new AtomicReference<>(null);
         flag = true;
         thread = new Thread(this);
+        thread.setDaemon(true);
     }
 
     public Passenger() {
@@ -66,7 +70,7 @@ public class Passenger implements Runnable, Comparable<Passenger> {
 
     public void addTicket(Ticket ticket) throws IllegalTicketValueException {
         if (ticket != null) {
-            this.ticket = ticket;
+            this.ticket.set(ticket);
         } else {
             throw new IllegalTicketValueException("An attempt to assign "
                     + "null value to passenger's ticket list");
@@ -82,76 +86,61 @@ public class Passenger implements Runnable, Comparable<Passenger> {
     }
 
     public Ticket getTicket() {
-        return ticket;
+        return ticket.get();
     }
 
     public boolean findTerminalByDestination(Terminal t) {
         if (t != null) {
-            return this.ticket.getDestination().equals(t.getDestination());
+            return this.ticket.get().getDestination().equals(t.getDestination());
         } else {
             return false;
         }
     }
 
     public void startAction() {
-        if (ticket != null) {
-            thread.start();
-        }
+        this.thread.start();
     }
 
     @Override
     public void run() {
 
         try {
-            while (this.flag) {
-
-                if (ticket == null) {
-                    List<Terminal> list = airport.getTerminalList();
-                    for (int i = 0; i < list.size(); i++) {
-                        if (list.get(i).isReadyForDeparture()
-                                && list.get(i).getAiplane().passengersNumber()
-                                < list.get(i).getAiplane().seatNumber()) {
-                            list.get(i).getAiplane().loadPassenger(this);
-                            break;
-                        }
+            while (flag) {
+                for (int i = 0; i < 2; i++) {
+                    tryToFindTerminal();
+                }
+//                log.info("RR terminal not found >>>>");
+                if (ticket.get() != null) {
+                    Exchanger<AtomicReference<Ticket>> ex = new Exchanger<>();
+                    int numTicket = ticket.get().getTicketNumber();
+                    try {
+                        ticket = ex.exchange(ticket, PropertyValue.WAITING_TIME, TimeUnit.MILLISECONDS);
+                    } catch (TimeoutException ex1) {
+                        ;
                     }
-                    this.flag = false;
-                } else {
-                    for (int i = 0; i < 2; i++) {
-                        tryToFindTerminal();
+                    if (numTicket != ticket.get().getTicketNumber()) {
+                        log.info("Passengers exchanged tickets");
                     }
-                    ticket = new Exchanger<Ticket>().exchange(ticket);
-                    log.trace("Passengers exchanged tickets");
-                    for (int i = 0; i < 2; i++) {
-                        tryToFindTerminal();
-                    }
+                }
+                for (int i = 0; i < 2; i++) {
+                    tryToFindTerminal();
                 }
             }
         } catch (InterruptedException | AirportLogicException ex) {
-            log.fatal(ex);
+            log.error(ex);
         }
     }
 
-    private void tryToFindTerminal() throws AirportLogicException {
-        Terminal t = null;
-        for (int i = 0; i < airport.getTerminalList().size(); i++) {
-            Terminal temp = airport.getTerminalList().get(i);
-            if (temp.isReadyForDeparture()
-                    && temp.getDestination().equals(ticket.getDestination())) {
-                t = temp;
-                break;
+    public void tryToFindTerminal() throws AirportLogicException {
+        List<Terminal> list = airport.getTerminalList();
+        for (int j = 0; j < list.size(); j++) {
+            if (list.get(j).isReadyForDeparture()
+                    && !list.get(j).getAiplane().isFull()
+                    && (ticket == null ? true
+                            : list.get(j).getDestination().equals(ticket.get().getDestination()))) {
+                list.get(j).getAiplane().loadPassenger(this);
+                flag = false;
             }
-        }
-        if (t == null) {
-            try {
-                TimeUnit.MILLISECONDS.sleep(PropertyValue.PASSENGER_WAIT_BEFORE_CHECKING);
-            } catch (InterruptedException ex) {
-                log.fatal(ex);
-            }
-        } else {
-            t.getAiplane().loadPassenger(this);
-            this.airport.getWaitingRoom().removePassenger(this);
-            this.flag = false;
         }
     }
 

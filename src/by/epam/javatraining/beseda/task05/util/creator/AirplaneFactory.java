@@ -49,7 +49,7 @@ public class AirplaneFactory {
         return arr;
     }
 
-    public static Airplane[] createSeveralAirplane(Airport a, int airplaneNumber) {
+    public static Airplane[] createSeveralAirplanes(Airport a, int airplaneNumber) {
         Airplane[] arr = new Airplane[airplaneNumber];
         for (int i = 0; i < airplaneNumber; i++) {
             arr[i] = createAirplane(a);

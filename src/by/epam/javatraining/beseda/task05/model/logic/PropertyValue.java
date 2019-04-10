@@ -11,7 +11,7 @@ import org.apache.log4j.Logger;
  */
 public class PropertyValue {
 
-    public static final String[] DESTINATION = new String[5];
+    public static final String[] DESTINATION;
 
     private static final Properties prop;
 
@@ -23,10 +23,12 @@ public class PropertyValue {
     public static final int SPARE_SEATS;
     public static final int PASSENGER_FACTORY_SLEEP;
     public static final int PASSENGER_NUMBER_TO_CREATE;
+    public static final int WAITING_TIME;
 
     static {
         prop = new Properties();
         loadProperties();
+        DESTINATION = new String[]{"London", "Paris", "Vienna", "Madrid", "Praha"};
         WAIT_BEFORE_LANDING = Integer.parseInt(prop.getProperty("waitBeforeLanding"));
         TERMINAL_WAIT_AFTER_DEPARTURE
                 = Integer.parseInt(prop.getProperty("terminalWaitAfterDeparture"));
@@ -42,11 +44,8 @@ public class PropertyValue {
                 = Integer.parseInt(prop.getProperty("passengerFactorySleep"));
         PASSENGER_NUMBER_TO_CREATE
                 = Integer.parseInt(prop.getProperty("passengerNumberToCreate"));
-        DESTINATION[0] = "London";
-        DESTINATION[1] = "Paris";
-        DESTINATION[2] = "Vienna";
-        DESTINATION[3] = "Madrid";
-        DESTINATION[4] = "Praha";
+        WAITING_TIME
+                = Integer.parseInt(prop.getProperty("waitingTime"));
     }
 
     private static void loadProperties() {

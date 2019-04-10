@@ -4,8 +4,10 @@ import by.epam.javatraining.beseda.task05.model.entity.Airplane;
 import by.epam.javatraining.beseda.task05.model.entity.Passenger;
 import by.epam.javatraining.beseda.task05.model.exception.AirportLogicException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalWaitingRoomException;
+import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 
 /**
@@ -31,7 +33,7 @@ public class Airport {
     private Airport(WaitingRoom waitingRoom, int terminalsNumber) {
         this.waitingRoom = waitingRoom;
         for (int i = 0; i < terminalsNumber; i++) {
-            terminals.add(new Terminal());
+            terminals.add(new Terminal(this));
         }
     }
 
@@ -73,6 +75,24 @@ public class Airport {
         return t;
     }
 
+    public void servePlane(Airplane a) throws InterruptedException {
+        boolean flag = true;
+        while (flag) {
+            for (int i = 0; i < this.terminals.size(); i++) {
+                if (a.havePassengers()) {
+                    if (this.terminals.get(i).workWithLandedPlane(a)) {
+                        flag = false;
+                    }
+                } else {
+                    if (this.terminals.get(i).workWithDeparturingPlane(a)) {
+                        TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
+                        flag = false;
+                    }
+                }
+            }
+        }
+    }
+
     public List<Terminal> getTerminalList() {
         return this.terminals;
     }
@@ -98,8 +118,8 @@ public class Airport {
                     passengersLeft++;
                 }
             }
-            log.trace(passengersLeft + " passengers left the airport");
-            log.trace(planePassengers - passengersLeft
+            log.info(passengersLeft + " passengers left the airport");
+            log.info(planePassengers - passengersLeft
                     + " passengers stayed in waiting room");
         }
     }

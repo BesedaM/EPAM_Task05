@@ -1,20 +1,19 @@
 package by.epam.javatraining.beseda.task05.model.entity;
 
 import by.epam.javatraining.beseda.task05.model.entity.airport.Airport;
-import by.epam.javatraining.beseda.task05.model.entity.airport.Terminal;
 import by.epam.javatraining.beseda.task05.model.exception.AirportLogicException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalAirportValueException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalDestinationException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalPassengerValueException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalSeatNumberException;
 import by.epam.javatraining.beseda.task05.model.exception.NotEnoughSpaceException;
-import by.epam.javatraining.beseda.task05.model.logic.Dispatcher;
 import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 
@@ -30,21 +29,20 @@ public class Airplane implements Runnable {
     private int planeNumber;
     private AtomicReference destination;
     private int seatsNumber;
+    private AtomicInteger passengerNumber;
     private AtomicReference airport;
     private ConcurrentLinkedQueue<Passenger> passengers;
 
     private CountDownLatch latch;
     private boolean flag;
-    private Thread thread;
 
     {
         airport = new AtomicReference(null);
         destination = new AtomicReference(null);
+        passengerNumber = new AtomicInteger(0);
         flag = true;
         passengers = new ConcurrentLinkedQueue<>();
         planeNumber = ++number;
-        thread = new Thread(this);
-        thread.start();
     }
 
     public Airplane(Airport p) {
@@ -58,7 +56,7 @@ public class Airplane implements Runnable {
         latch = new CountDownLatch(this.seatsNumber - PropertyValue.SPARE_SEATS);
     }
 
-    public void setDestination(String destination) throws IllegalDestinationException {
+    public void setDestination(AtomicReference<String> destination) throws IllegalDestinationException {
         if (destination != null) {
             this.destination.lazySet(destination);
         } else {
@@ -85,15 +83,15 @@ public class Airplane implements Runnable {
     }
 
     public Airport getAirport() {
-        return (Airport)this.airport.get();
+        return (Airport) this.airport.get();
+    }
+
+    public CountDownLatch getLatch() {
+        return this.latch;
     }
 
     public int seatNumber() {
         return seatsNumber;
-    }
-
-    public void startAction() {
-        thread.start();
     }
 
     public void setSeatsNumber(int number) throws IllegalSeatNumberException {
@@ -105,17 +103,14 @@ public class Airplane implements Runnable {
         }
     }
 
-    public boolean deletePlane() {
-        if (passengers.isEmpty()) {
-            thread.interrupt();
-            return true;
-        }
-        return false;
+    public void stopPlane() {
+        this.flag = false;
     }
 
     public void loadPassenger(Passenger p) throws AirportLogicException {
         if (p != null) {
             if (passengers.size() < this.seatsNumber) {
+                passengerNumber.getAndIncrement();
                 passengers.add(p);
                 latch.countDown();
             } else {
@@ -130,6 +125,7 @@ public class Airplane implements Runnable {
     }
 
     public Passenger pollPassenger() {
+        passengerNumber.getAndDecrement();
         return passengers.poll();
     }
 
@@ -141,63 +137,30 @@ public class Airplane implements Runnable {
         return passengers.size();
     }
 
+    public boolean isFull() {
+        return passengerNumber.get() - seatsNumber == 0;
+    }
+
     @Override
     public void run() {
         while (flag) {
             try {
-                Terminal t;
                 if (!passengers.isEmpty()) {
                     TimeUnit.MILLISECONDS.sleep(new Random().nextInt(
                             PropertyValue.WAIT_BEFORE_LANDING));
-
-                    while (true) {
-                        log.trace("WHILE running...");
-                        t = ((Airport)airport.get()).getFreeTerminal();
-                        if (t != null) {
-                            t.lockTerminal();
-                            break;
-                        } else {
-                            TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
-                        }
-                    }
-                    log.trace("Plane №" + this.planeNumber + " landed");
-
-                    ((Airport)airport.get()).takePassengers(this);
-                    TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
-                    t.unlockTerminal();
+                    ((Airport) airport.get()).servePlane(this);
                 }
 
                 TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_DEPARTURE);
 
-                while (true) {
-                    t = ((Airport)airport.get()).getFreeTerminal();
-                    if (t != null) {
-                        Dispatcher.setTerminalDestination(t);
-                        log.trace("!Plane to " + t.getDestination()
-                                + " departures from terminal " + t.getNumber());
-                        t.lockTerminal();
-                        t.registerAirplane(this);
-                        break;
-                    } else {
-                        TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
-                    }
-                }
-                this.destination.lazySet(t.getDestination());
-                latch.await();
-
-                log.trace("The plane to " + this.destination + " has departured...");
+                ((Airport) airport.get()).servePlane(this);
 
                 TimeUnit.MILLISECONDS.sleep(PropertyValue.TERMINAL_WAIT_AFTER_DEPARTURE);
-
                 flag = false;
             } catch (InterruptedException ex) {
                 Logger.getLogger(Airplane.class.getSimpleName()).error(ex);
             }
         }
-    }
-
-    public void stopRunning() {
-        this.flag = false;
     }
 
     @Override

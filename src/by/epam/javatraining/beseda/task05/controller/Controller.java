@@ -7,6 +7,8 @@ import by.epam.javatraining.beseda.task05.util.creator.AirportCreator;
 import by.epam.javatraining.beseda.task05.util.creator.PassengerFactory;
 import by.epam.javatraining.beseda.task05.view.LogPrinter;
 import by.epam.javatraining.beseda.task05.view.Printer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  *
@@ -22,6 +24,15 @@ public class Controller {
 
         Airplane[] aArr = AirplaneFactory.createFilledAirplanes(a, 11);
 
+        ExecutorService es = Executors.newFixedThreadPool(20);
+        for (Airplane aArr1 : aArr) {
+            es.execute(aArr1);
+        }
+        es.shutdown();
+        
         PassengerFactory.getFactory(a);
+        
+
+        
     }
 }
