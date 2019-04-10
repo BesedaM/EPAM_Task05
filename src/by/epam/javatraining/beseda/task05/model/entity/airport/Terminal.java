@@ -75,9 +75,9 @@ public class Terminal {
         return this.forDeparture.get();
     }
 
-    public void setDepartureDestination(String destination) throws IllegalDestinationException {
-        if (destination != null) {
-            this.destination.set(destination);
+    public void setDepartureDestination(AtomicReference<String> destination) throws IllegalDestinationException {
+        if (destination.get() != null) {
+            this.destination = destination;
         } else {
             throw new IllegalDestinationException("An attempt to assign "
                     + "null value to terminal destination field");
@@ -89,7 +89,7 @@ public class Terminal {
         if (lock.tryLock()) {
             try {
                 TimeUnit.MILLISECONDS.sleep(new Random().nextInt(PropertyValue.WAITING_TIME));
-                log.info("Plane №" + plane.planeNumber() + " landed " + this);
+                log.info("Plane №" + plane.planeNumber() + " landed ");
                 TimeUnit.MILLISECONDS.sleep(PropertyValue.WAITING_TIME);
                 airport.takePassengers(plane);
                 TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
@@ -108,11 +108,11 @@ public class Terminal {
         boolean flag = false;
         if (lock.tryLock()) {
             try {
-                a.setDestination(destination);
-                log.info(this.airplane.get() + " airplane set");
                 airplane.set(a);
-
                 Dispatcher.setTerminalDestination(this);
+                a.setDestination(destination);
+//                log.info(this.airplane.get() + " airplane set");
+//                airplane = a;
 
                 this.setReadyForDeparture();
 
@@ -122,7 +122,7 @@ public class Terminal {
 
                 a.getLatch().await();
 
-                log.info("The plane to " + this.destination + " has departured...");
+                log.info("The plane to " + this.destination + " had departured...");
             } catch (InterruptedException | IllegalDestinationException ex) {
                 log.fatal(ex);
             } finally {
@@ -138,8 +138,8 @@ public class Terminal {
         return this.destination.get();
     }
 
-    public Airplane getAiplane() {
-        return (Airplane) this.airplane.get();
+    public AtomicReference<Airplane> getAiplane() {
+        return this.airplane;
     }
 
     @Override

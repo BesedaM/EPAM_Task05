@@ -58,7 +58,7 @@ public class Airplane implements Runnable {
 
     public void setDestination(AtomicReference<String> destination) throws IllegalDestinationException {
         if (destination != null) {
-            this.destination.lazySet(destination);
+            this.destination.set(destination);
         } else {
             throw new IllegalDestinationException("An attempt to assign "
                     + "illegal destination value to airplane number " + this.planeNumber);
@@ -138,7 +138,7 @@ public class Airplane implements Runnable {
     }
 
     public boolean isFull() {
-        return passengerNumber.get() - seatsNumber == 0;
+        return seatsNumber - passengerNumber.get() == 5;
     }
 
     @Override

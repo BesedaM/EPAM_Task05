@@ -6,6 +6,7 @@ import by.epam.javatraining.beseda.task05.model.exception.AirportLogicException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalWaitingRoomException;
 import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
@@ -118,9 +119,14 @@ public class Airport {
                     passengersLeft++;
                 }
             }
-            log.info(passengersLeft + " passengers left the airport");
             log.info(planePassengers - passengersLeft
                     + " passengers stayed in waiting room");
+            try {
+                TimeUnit.MILLISECONDS.sleep(new Random().nextInt(PropertyValue.WAITING_TIME));
+            } catch (InterruptedException ex) {
+                log.error(ex);
+            }
+            log.info(passengersLeft + " passengers left the airport");
         }
     }
 

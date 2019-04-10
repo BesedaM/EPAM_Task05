@@ -135,10 +135,10 @@ public class Passenger implements Runnable, Comparable<Passenger> {
         List<Terminal> list = airport.getTerminalList();
         for (int j = 0; j < list.size(); j++) {
             if (list.get(j).isReadyForDeparture()
-                    && !list.get(j).getAiplane().isFull()
-                    && (ticket == null ? true
-                            : list.get(j).getDestination().equals(ticket.get().getDestination()))) {
-                list.get(j).getAiplane().loadPassenger(this);
+                    && (ticket.get() == null ? true
+                    : list.get(j).getDestination().equals(ticket.get().getDestination()))
+                    && !list.get(j).getAiplane().get().isFull()) {
+                list.get(j).getAiplane().get().loadPassenger(this);
                 flag = false;
             }
         }
