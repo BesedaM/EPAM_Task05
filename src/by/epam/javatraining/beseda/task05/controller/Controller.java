@@ -20,19 +20,17 @@ public class Controller {
 
         Printer log = LogPrinter.getPrinter();
 
-        Airport a = AirportCreator.createAirport(4);
+        Airport a = AirportCreator.createAirport(SystemConfiguration.TERMINAL_NUMBER);
 
-        Airplane[] aArr = AirplaneFactory.createFilledAirplanes(a, 11);
+        Airplane[] aArr = AirplaneFactory.createFilledAirplanes(a, SystemConfiguration.AIRPLANE_NUMBER);
 
-        ExecutorService es = Executors.newFixedThreadPool(20);
+        ExecutorService es = Executors.newFixedThreadPool(SystemConfiguration.AIRPLANE_NUMBER + 2);
         for (Airplane aArr1 : aArr) {
             es.execute(aArr1);
         }
         es.shutdown();
-        
-        PassengerFactory.getFactory(a);
-        
 
-        
+        PassengerFactory.getFactory(a);
+
     }
 }

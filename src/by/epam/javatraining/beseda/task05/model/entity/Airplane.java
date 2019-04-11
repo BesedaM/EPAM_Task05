@@ -138,7 +138,7 @@ public class Airplane implements Runnable {
     }
 
     public boolean isFull() {
-        return seatsNumber - passengerNumber.get() == 5;
+        return seatsNumber - passengerNumber.get() < 1;
     }
 
     @Override

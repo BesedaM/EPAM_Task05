@@ -109,7 +109,6 @@ public class Passenger implements Runnable, Comparable<Passenger> {
                 for (int i = 0; i < 2; i++) {
                     tryToFindTerminal();
                 }
-//                log.info("RR terminal not found >>>>");
                 if (ticket.get() != null) {
                     Exchanger<AtomicReference<Ticket>> ex = new Exchanger<>();
                     int numTicket = ticket.get().getTicketNumber();
@@ -135,9 +134,9 @@ public class Passenger implements Runnable, Comparable<Passenger> {
         List<Terminal> list = airport.getTerminalList();
         for (int j = 0; j < list.size(); j++) {
             if (list.get(j).isReadyForDeparture()
+                    && !list.get(j).getAiplane().get().isFull()
                     && (ticket.get() == null ? true
-                    : list.get(j).getDestination().equals(ticket.get().getDestination()))
-                    && !list.get(j).getAiplane().get().isFull()) {
+                    : list.get(j).getDestination().equals(ticket.get().getDestination()))) {
                 list.get(j).getAiplane().get().loadPassenger(this);
                 flag = false;
             }

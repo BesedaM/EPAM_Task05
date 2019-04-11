@@ -29,8 +29,9 @@ public class Terminal {
     private AtomicReference<Airplane> airplane;
 
     {
+        destination = new AtomicReference<>();
         forDeparture = new AtomicBoolean(false);
-        airplane = new AtomicReference<>(null);
+        airplane = new AtomicReference<>();
         number = ++terminalNumber;
         lock = new ReentrantLock(true);
     }
@@ -66,11 +67,6 @@ public class Terminal {
         this.airplane.set(a);
     }
 
-    public void deregisterAirplane(Airplane a) {
-        this.forDeparture.lazySet(false);
-        this.airplane = null;
-    }
-
     public boolean isReadyForDeparture() {
         return this.forDeparture.get();
     }
@@ -96,7 +92,6 @@ public class Terminal {
             } catch (InterruptedException ex) {
                 log.fatal(ex);
             } finally {
-                deregisterAirplane(plane);
                 lock.unlock();
             }
             flag = true;
@@ -109,24 +104,23 @@ public class Terminal {
         if (lock.tryLock()) {
             try {
                 airplane.set(a);
-                Dispatcher.setTerminalDestination(this);
                 a.setDestination(destination);
-//                log.info(this.airplane.get() + " airplane set");
-//                airplane = a;
+                Dispatcher.setTerminalDestination(this);
 
-                this.setReadyForDeparture();
+                forDeparture.set(true);
 
                 log.info("!Plane to " + this.destination
                         + " departures from terminal " + this.number);
                 TimeUnit.MILLISECONDS.sleep(PropertyValue.WAITING_TIME);
 
                 a.getLatch().await();
-
-                log.info("The plane to " + this.destination + " had departured...");
+                forDeparture.set(false);
+//                TimeUnit.MILLISECONDS.sleep(PropertyValue.WAITING_TIME);
+                airplane.set(null);
+                log.info("The plane to " + this.destination + " departured...");
             } catch (InterruptedException | IllegalDestinationException ex) {
                 log.fatal(ex);
             } finally {
-                deregisterAirplane(a);
                 lock.unlock();
             }
             flag = true;
