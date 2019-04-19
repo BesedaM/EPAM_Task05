@@ -4,23 +4,20 @@ import by.epam.javatraining.beseda.task05.model.entity.Passenger;
 import by.epam.javatraining.beseda.task05.model.exception.AirportLogicException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalCapacityException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalPassengerValueException;
-import by.epam.javatraining.beseda.task05.model.exception.NotEnoughSpaceException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
- * @author User
+ * @author Beseda
+ * @version 1.0 19/04/2019
  */
 public class WaitingRoom {
 
     private int capacity;
     private Queue<Passenger> passengers;
-    private AtomicInteger passengersNumber;
 
     {
-        passengersNumber = new AtomicInteger(0);
         passengers = new ConcurrentLinkedQueue<>();
     }
 
@@ -45,19 +42,16 @@ public class WaitingRoom {
     }
 
     public int passengersNumber() {
-        return passengersNumber.get();
+        return passengers.size();
     }
 
     public void addPassenger(Passenger p) throws AirportLogicException {
         if (p != null) {
             if (passengers.size() < this.capacity) {
                 passengers.add(p);
-                passengersNumber.addAndGet(1);
-                p.startAction();
-            } else {
-                throw new NotEnoughSpaceException("Not enough space in waiting room "
-                        + "for adding another passenger");
+                passengers.size();
             }
+            p.startAction();
         } else {
             throw new IllegalPassengerValueException("An attempt to add "
                     + "null value passenger to waiting room");

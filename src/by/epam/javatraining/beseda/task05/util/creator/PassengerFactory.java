@@ -3,7 +3,7 @@ package by.epam.javatraining.beseda.task05.util.creator;
 import by.epam.javatraining.beseda.task05.model.entity.Passenger;
 import by.epam.javatraining.beseda.task05.model.entity.airport.Airport;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalTicketValueException;
-import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
+import by.epam.javatraining.beseda.task05.systemconfig.PropertyValue;
 import static by.epam.javatraining.beseda.task05.util.creator.TicketFactory.createRandomTicket;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -11,7 +11,8 @@ import org.apache.log4j.Logger;
 
 /**
  *
- * @author User
+ * @author Beseda
+ * @version 1.0 19/04/2019
  */
 public class PassengerFactory implements Runnable {
 
@@ -61,8 +62,8 @@ public class PassengerFactory implements Runnable {
     public void run() {
         while (flag) {
             try {
-                TimeUnit.MILLISECONDS.sleep(PropertyValue.PASSENGER_FACTORY_SLEEP);
-                for (int i = 0; i < PropertyValue.PASSENGER_NUMBER_TO_CREATE; i++) {
+                TimeUnit.MILLISECONDS.sleep(PropertyValue.PASSENGER_FACTORY_WAITING_INTERVAL);
+                for (int i = 0; i < PropertyValue.PASSENGER_FACTORY_PASSANGERS_TO_CREATE; i++) {
                     Passenger p = createPassenger();
                     p.setAirport(aiport);
                     p.startAction();

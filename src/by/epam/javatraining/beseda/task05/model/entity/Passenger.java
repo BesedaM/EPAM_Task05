@@ -6,24 +6,25 @@ import by.epam.javatraining.beseda.task05.model.exception.AirportLogicException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalPassengerNameException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalPassengerSurnameException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalTicketValueException;
-import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
+import by.epam.javatraining.beseda.task05.systemconfig.PropertyValue;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
 import org.apache.log4j.Logger;
 
 /**
  *
- * @author User
+ * @author Beseda
+ * @version 1.0 19/04/2019
  */
 public class Passenger implements Runnable, Comparable<Passenger> {
 
     private String name;
     private String surname;
-    private AtomicReference<Ticket> ticket;
+    private Ticket ticket;
     private Airport airport;
 
     private boolean flag;
@@ -32,7 +33,7 @@ public class Passenger implements Runnable, Comparable<Passenger> {
     Logger log = Logger.getLogger(Passenger.class.getSimpleName());
 
     {
-        ticket = new AtomicReference<>(null);
+//        ticket = new AtomicReference<>(null);
         flag = true;
         thread = new Thread(this);
         thread.setDaemon(true);
@@ -70,7 +71,7 @@ public class Passenger implements Runnable, Comparable<Passenger> {
 
     public void addTicket(Ticket ticket) throws IllegalTicketValueException {
         if (ticket != null) {
-            this.ticket.set(ticket);
+            this.ticket = ticket;
         } else {
             throw new IllegalTicketValueException("An attempt to assign "
                     + "null value to passenger's ticket list");
@@ -86,12 +87,12 @@ public class Passenger implements Runnable, Comparable<Passenger> {
     }
 
     public Ticket getTicket() {
-        return ticket.get();
+        return ticket;
     }
 
     public boolean findTerminalByDestination(Terminal t) {
         if (t != null) {
-            return this.ticket.get().getDestination().equals(t.getDestination());
+            return this.ticket.getDestination().equals(t.getDestination());
         } else {
             return false;
         }
@@ -107,38 +108,46 @@ public class Passenger implements Runnable, Comparable<Passenger> {
         try {
             while (flag) {
                 for (int i = 0; i < 2; i++) {
-                    tryToFindTerminal();
+                    findingTerminal();
                 }
-                if (ticket.get() != null) {
-                    Exchanger<AtomicReference<Ticket>> ex = new Exchanger<>();
-                    int numTicket = ticket.get().getTicketNumber();
-                    try {
-                        ticket = ex.exchange(ticket, PropertyValue.WAITING_TIME, TimeUnit.MILLISECONDS);
-                    } catch (TimeoutException ex1) {
-                        ;
-                    }
-                    if (numTicket != ticket.get().getTicketNumber()) {
-                        log.info("Passengers exchanged tickets");
-                    }
+                if (ticket != null) {
+                    exchangeTickets();
                 }
                 for (int i = 0; i < 2; i++) {
-                    tryToFindTerminal();
+                    findingTerminal();
+                }
+
+                if (ticket != null) {
+                    exchangeTickets();
                 }
             }
-        } catch (InterruptedException | AirportLogicException ex) {
+        } catch (AirportLogicException ex) {
             log.error(ex);
         }
     }
 
-    public void tryToFindTerminal() throws AirportLogicException {
+    public void exchangeTickets() {
+        Exchanger<Ticket> ex = new Exchanger<>();
+        try {
+            ticket = ex.exchange(ticket,
+                    PropertyValue.WAITING_FOR_TICKETS_EXCHANGE, TimeUnit.MILLISECONDS);
+            log.info("Passengers exchanged tickets");
+        } catch (TimeoutException ex1) {
+        } catch (InterruptedException ex1) {
+            log.error("" + ex1);
+        }
+
+    }
+
+    public void findingTerminal() throws AirportLogicException {
         List<Terminal> list = airport.getTerminalList();
         for (int j = 0; j < list.size(); j++) {
-            if (list.get(j).isReadyForDeparture()
-                    && !list.get(j).getAiplane().get().isFull()
-                    && (ticket.get() == null ? true
-                    : list.get(j).getDestination().equals(ticket.get().getDestination()))) {
-                list.get(j).getAiplane().get().loadPassenger(this);
-                flag = false;
+            if (list.get(j).isReadyForDeparture()) {
+                if (list.get(j).getAiplane().get().loadPassenger(this)) {
+                    airport.getWaitingRoom().removePassenger(this);
+                    flag = false;
+                    return;
+                }
             }
         }
     }

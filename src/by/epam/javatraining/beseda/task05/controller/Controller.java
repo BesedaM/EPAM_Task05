@@ -1,5 +1,6 @@
 package by.epam.javatraining.beseda.task05.controller;
 
+import by.epam.javatraining.beseda.task05.systemconfig.SystemConfiguration;
 import by.epam.javatraining.beseda.task05.model.entity.Airplane;
 import by.epam.javatraining.beseda.task05.model.entity.airport.Airport;
 import by.epam.javatraining.beseda.task05.util.creator.AirplaneFactory;
@@ -12,7 +13,8 @@ import java.util.concurrent.Executors;
 
 /**
  *
- * @author User
+ * @author Beseda
+ * @version 1.0 19/04/2019
  */
 public class Controller {
 
@@ -22,7 +24,7 @@ public class Controller {
 
         Airport a = AirportCreator.createAirport(SystemConfiguration.TERMINAL_NUMBER);
 
-        Airplane[] aArr = AirplaneFactory.createFilledAirplanes(a, SystemConfiguration.AIRPLANE_NUMBER);
+        Airplane[] aArr = AirplaneFactory.createFilledAirplanesArray(a, SystemConfiguration.AIRPLANE_NUMBER);
 
         ExecutorService es = Executors.newFixedThreadPool(SystemConfiguration.AIRPLANE_NUMBER + 2);
         for (Airplane aArr1 : aArr) {

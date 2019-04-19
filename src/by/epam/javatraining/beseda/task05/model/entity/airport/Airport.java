@@ -4,7 +4,7 @@ import by.epam.javatraining.beseda.task05.model.entity.Airplane;
 import by.epam.javatraining.beseda.task05.model.entity.Passenger;
 import by.epam.javatraining.beseda.task05.model.exception.AirportLogicException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalWaitingRoomException;
-import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
+import by.epam.javatraining.beseda.task05.systemconfig.PropertyValue;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -13,7 +13,8 @@ import org.apache.log4j.Logger;
 
 /**
  *
- * @author User
+ * @author Beseda
+ * @version 1.0 19/04/2019
  */
 public class Airport {
 
@@ -77,17 +78,16 @@ public class Airport {
     }
 
     public void servePlane(Airplane a) throws InterruptedException {
-        boolean flag = true;
-        while (flag) {
+        while (true) {
             for (int i = 0; i < this.terminals.size(); i++) {
                 if (a.havePassengers()) {
                     if (this.terminals.get(i).workWithLandedPlane(a)) {
-                        flag = false;
+                        return;
                     }
                 } else {
                     if (this.terminals.get(i).workWithDeparturingPlane(a)) {
                         TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_TERMINAL_FREE);
-                        flag = false;
+                        return;
                     }
                 }
             }

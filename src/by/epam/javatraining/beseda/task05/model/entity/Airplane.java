@@ -6,20 +6,19 @@ import by.epam.javatraining.beseda.task05.model.exception.IllegalAirportValueExc
 import by.epam.javatraining.beseda.task05.model.exception.IllegalDestinationException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalPassengerValueException;
 import by.epam.javatraining.beseda.task05.model.exception.IllegalSeatNumberException;
-import by.epam.javatraining.beseda.task05.model.exception.NotEnoughSpaceException;
-import by.epam.javatraining.beseda.task05.model.logic.PropertyValue;
+import by.epam.javatraining.beseda.task05.systemconfig.PropertyValue;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 
 /**
  *
- * @author User
+ * @author Beseda
+ * @version 1.0 19/04/2019
  */
 public class Airplane implements Runnable {
 
@@ -29,7 +28,6 @@ public class Airplane implements Runnable {
     private int planeNumber;
     private AtomicReference destination;
     private int seatsNumber;
-    private AtomicInteger passengerNumber;
     private AtomicReference airport;
     private ConcurrentLinkedQueue<Passenger> passengers;
 
@@ -39,7 +37,6 @@ public class Airplane implements Runnable {
     {
         airport = new AtomicReference(null);
         destination = new AtomicReference(null);
-        passengerNumber = new AtomicInteger(0);
         flag = true;
         passengers = new ConcurrentLinkedQueue<>();
         planeNumber = ++number;
@@ -53,7 +50,7 @@ public class Airplane implements Runnable {
         airport.lazySet(p);
         this.destination.lazySet(destination);
         this.seatsNumber = seatsNumber;
-        latch = new CountDownLatch(this.seatsNumber - PropertyValue.SPARE_SEATS);
+        latch = new CountDownLatch(this.seatsNumber);
     }
 
     public void setDestination(AtomicReference<String> destination) throws IllegalDestinationException {
@@ -97,7 +94,7 @@ public class Airplane implements Runnable {
     public void setSeatsNumber(int number) throws IllegalSeatNumberException {
         if (number > 0) {
             this.seatsNumber = number;
-            latch = new CountDownLatch(this.seatsNumber - PropertyValue.SPARE_SEATS);
+            latch = new CountDownLatch(this.seatsNumber);
         } else {
             throw new IllegalSeatNumberException();
         }
@@ -107,15 +104,18 @@ public class Airplane implements Runnable {
         this.flag = false;
     }
 
-    public void loadPassenger(Passenger p) throws AirportLogicException {
+    public boolean loadPassenger(Passenger p) throws AirportLogicException {
         if (p != null) {
-            if (passengers.size() < this.seatsNumber) {
-                passengerNumber.getAndIncrement();
-                passengers.add(p);
-                latch.countDown();
+            if (!isFull()
+                    && (p.getTicket() == null
+                    || p.getTicket().getDestination().equals(this.destination.get()))) {
+                synchronized (this) {
+                    passengers.add(p);
+                    latch.countDown();
+                }
+                return true;
             } else {
-                throw new NotEnoughSpaceException("The plane is full. "
-                        + "Impossible to add another passsenger");
+                return false;
             }
         } else {
             throw new IllegalPassengerValueException("An attempt to add null "
@@ -125,7 +125,6 @@ public class Airplane implements Runnable {
     }
 
     public Passenger pollPassenger() {
-        passengerNumber.getAndDecrement();
         return passengers.poll();
     }
 
@@ -138,7 +137,7 @@ public class Airplane implements Runnable {
     }
 
     public boolean isFull() {
-        return seatsNumber - passengerNumber.get() < 1;
+        return seatsNumber - passengers.size() < 1;
     }
 
     @Override
@@ -152,7 +151,8 @@ public class Airplane implements Runnable {
                 }
 
                 TimeUnit.MILLISECONDS.sleep(PropertyValue.WAIT_BEFORE_DEPARTURE);
-
+                this.destination = new AtomicReference<>(PropertyValue.DESTINATION[new Random()
+                        .nextInt(PropertyValue.DESTINATION.length)]);
                 ((Airport) airport.get()).servePlane(this);
 
                 TimeUnit.MILLISECONDS.sleep(PropertyValue.TERMINAL_WAIT_AFTER_DEPARTURE);

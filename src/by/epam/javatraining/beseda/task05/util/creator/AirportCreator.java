@@ -5,7 +5,8 @@ import by.epam.javatraining.beseda.task05.model.entity.airport.WaitingRoom;
 
 /**
  *
- * @author User
+ * @author Beseda
+ * @version 1.0 19/04/2019
  */
 public class AirportCreator {
 

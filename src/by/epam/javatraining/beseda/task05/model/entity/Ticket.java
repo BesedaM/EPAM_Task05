@@ -5,7 +5,8 @@ import java.util.Objects;
 
 /**
  *
- * @author User
+ * @author Beseda
+ * @version 1.0 19/04/2019
  */
 public class Ticket {
 
