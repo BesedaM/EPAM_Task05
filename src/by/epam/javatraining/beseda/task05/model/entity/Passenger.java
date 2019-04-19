@@ -9,6 +9,7 @@ import by.epam.javatraining.beseda.task05.model.exception.IllegalTicketValueExce
 import by.epam.javatraining.beseda.task05.systemconfig.PropertyValue;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -27,14 +28,16 @@ public class Passenger implements Runnable, Comparable<Passenger> {
     private Ticket ticket;
     private Airport airport;
 
-    private boolean flag;
+    private static Exchanger<Ticket> exchanger;         //MUST BE STATIC ANYWAY!!!!
     private Thread thread;
+    private boolean flag;
 
     Logger log = Logger.getLogger(Passenger.class.getSimpleName());
 
     {
-//        ticket = new AtomicReference<>(null);
         flag = true;
+        exchanger = new Exchanger<>();
+
         thread = new Thread(this);
         thread.setDaemon(true);
     }
@@ -107,36 +110,29 @@ public class Passenger implements Runnable, Comparable<Passenger> {
 
         try {
             while (flag) {
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 3; i++) {
                     findingTerminal();
                 }
-                if (ticket != null) {
-                    exchangeTickets();
-                }
-                for (int i = 0; i < 2; i++) {
-                    findingTerminal();
-                }
-
+                TimeUnit.MILLISECONDS.sleep(
+                        new Random().nextInt(PropertyValue.WAITING_FOR_TICKETS_EXCHANGE));
                 if (ticket != null) {
                     exchangeTickets();
                 }
             }
-        } catch (AirportLogicException ex) {
+        } catch (AirportLogicException | InterruptedException ex) {
             log.error(ex);
         }
     }
 
     public void exchangeTickets() {
-        Exchanger<Ticket> ex = new Exchanger<>();
         try {
-            ticket = ex.exchange(ticket,
-                    PropertyValue.WAITING_FOR_TICKETS_EXCHANGE, TimeUnit.MILLISECONDS);
-            log.info("Passengers exchanged tickets");
+                ticket = exchanger.exchange(ticket,
+                        PropertyValue.WAITING_FOR_TICKETS_EXCHANGE, TimeUnit.MILLISECONDS);
+                log.trace("!Passengers exchanged tickets!");
         } catch (TimeoutException ex1) {
         } catch (InterruptedException ex1) {
             log.error("" + ex1);
         }
-
     }
 
     public void findingTerminal() throws AirportLogicException {

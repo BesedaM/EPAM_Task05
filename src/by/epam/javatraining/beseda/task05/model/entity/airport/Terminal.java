@@ -119,7 +119,7 @@ public class Terminal {
                 TimeUnit.MILLISECONDS.sleep(100);
                 airplane.set(null);
                 log.info("...Plane to " + this.destination + "(№" + a.planeNumber()
-                        + ") departured... with " + a.passengersNumber() + " passangers");
+                        + ") departured with " + a.passengersNumber() + " passangers onboard");
             } catch (InterruptedException ex) {
                 log.fatal(ex);
             } finally {
